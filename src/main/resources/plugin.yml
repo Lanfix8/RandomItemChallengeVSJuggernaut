@@ -1,0 +1,10 @@
+name: RandomItemChallengeVSJuggernaut
+author: Lanfix
+version: '${project.version}'
+main: fr.lanfix.randomitemchallengevsjuggernaut.RandomItemChallengeVSJuggernaut
+api-version: '1.19'
+commands:
+  ricvsjuggernaut:
+    description: Control the Random Item Challenge VS Juggernaut Game
+    permission: randomitemchallengevsjuggernaut.admin
+    usage: /ricvsjuggernaut <start/stop/juggernauts/survivors>
