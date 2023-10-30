@@ -7,10 +7,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+
+import java.util.Objects;
 
 public class ItemEvents implements Listener {
 
@@ -22,18 +22,23 @@ public class ItemEvents implements Listener {
 
     @EventHandler
     public void onPickupItem(EntityPickupItemEvent event) {
-        // => PersistentDataContainer
-        if (event.getEntity() instanceof Player player && event.getItem().getItemStack().hasItemMeta()) {
+        if (game.isRunning() && event.getEntity() instanceof Player player) {
             Item item = event.getItem();
-            ItemStack itemStack = item.getItemStack();
-            ItemMeta itemMeta = itemStack.getItemMeta();
-            assert itemMeta != null;
-            PersistentDataContainer dataContainer = itemMeta.getPersistentDataContainer();
+            PersistentDataContainer dataContainer = Objects.requireNonNull(item.getItemStack().getItemMeta()).getPersistentDataContainer();
             if (dataContainer.has(RandomItemChallengeVSJuggernaut.protectedDataKey, PersistentDataType.STRING)) {
                 String protection = dataContainer.get(RandomItemChallengeVSJuggernaut.protectedDataKey, PersistentDataType.STRING);
                 assert protection != null;
                 if ((protection.equalsIgnoreCase("survivor") && !game.isSurvivor(player)) ||
                         (protection.equalsIgnoreCase("juggernaut") && !game.isJuggernaut(player))) {
+                    event.setCancelled(true);
+                }
+            }
+            // also in the datacontainer of the item entity because it's broken without that wtf
+            PersistentDataContainer itemDataContainer = Objects.requireNonNull(item.getPersistentDataContainer());
+            if (itemDataContainer.has(RandomItemChallengeVSJuggernaut.protectedDataKey, PersistentDataType.STRING)) {
+                String protection = itemDataContainer.get(RandomItemChallengeVSJuggernaut.protectedDataKey, PersistentDataType.STRING);
+                assert protection != null;
+                if (protection.equalsIgnoreCase("survivor") && !game.isSurvivor(player)) {
                     event.setCancelled(true);
                 }
             }

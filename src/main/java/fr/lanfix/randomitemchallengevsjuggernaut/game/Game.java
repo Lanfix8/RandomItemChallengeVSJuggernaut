@@ -1,16 +1,17 @@
 package fr.lanfix.randomitemchallengevsjuggernaut.game;
 
 import fr.lanfix.randomitemchallengevsjuggernaut.RandomItemChallengeVSJuggernaut;
+import fr.lanfix.randomitemchallengevsjuggernaut.utils.StringUtils;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.logging.Level;
 
@@ -37,6 +38,11 @@ public class Game {
 
     public void start(Location spawnLocation) {
         Bukkit.getLogger().log(Level.INFO, "Starting Random Item Challenge VS Juggernaut");
+        World world = spawnLocation.getWorld();
+        assert world != null;
+        world.setTime(0);
+        world.getWorldBorder().reset();
+        world.setSpawnLocation(spawnLocation);
         for (Player survivor: survivors) {
             survivor.setHealth(20);
             survivor.setSaturation(20);
@@ -109,17 +115,20 @@ public class Game {
                 // find the location and choose item
                 Location location = player.getLocation();
                 Material material = choices.get(this.random.nextInt(choices.size()));
-                ItemStack item = new ItemStack(material, material.getMaxStackSize());
-                // set player name in lore to set property so others don't pick up his items
-                ItemMeta itemMeta = item.getItemMeta();
-                assert itemMeta != null;
-                PersistentDataContainer dataContainer = itemMeta.getPersistentDataContainer();
+                ItemStack itemStack = new ItemStack(material, material.getMaxStackSize());
+                // set item protected to survivors
+                PersistentDataContainer dataContainer = Objects.requireNonNull(itemStack.getItemMeta()).getPersistentDataContainer();
                 dataContainer.set(RandomItemChallengeVSJuggernaut.protectedDataKey, PersistentDataType.STRING, "survivor");
                 // drop the items
                 for (int j = 0; j < main.getConfig().getInt("stacks", 9); j++) {
-                    player.getWorld().dropItem(location, item);
+                    player.getWorld().dropItem(location, itemStack, item -> {
+                        // set item protected to survivors again because the first option doesn't work at the drop but works when dropped by a player (wtf)
+                        PersistentDataContainer itemDataContainer = item.getPersistentDataContainer();
+                        itemDataContainer.set(RandomItemChallengeVSJuggernaut.protectedDataKey, PersistentDataType.STRING, "survivor");
+                    });
                 }
-                player.sendMessage(ChatColor.GREEN + "You just got your random item: " + itemMeta.getLocalizedName());
+                player.sendMessage(ChatColor.GREEN + "You just got your random item: "
+                        + StringUtils.snakeCaseToSpacedPascalCase(material.toString()));
             }
         }
     }
@@ -141,7 +150,6 @@ public class Game {
 
     public void survivorDeath(Player player) {
         if (this.survivors.contains(player)) {
-            Bukkit.broadcastMessage("$PLAYER is out !".replace("$PLAYER", player.getName()));
             this.survivors.remove(player);
             if (this.survivors.isEmpty()) {
                 Bukkit.broadcastMessage("%s%sJuggernauts have won, they killed all survivors !".formatted(ChatColor.BOLD, ChatColor.BLUE));

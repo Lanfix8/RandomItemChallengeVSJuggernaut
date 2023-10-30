@@ -8,10 +8,7 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class JuggernautKit {
 
@@ -42,10 +39,12 @@ public class JuggernautKit {
     }
 
     public static void removeKitFromItemList(List<ItemStack> items) {
-        List<ItemStack> toRemove = new ArrayList<>(kit);
-        items.forEach(item -> {
+        List<ItemStack> copyToIterate = new ArrayList<>(items);
+        List<ItemStack> toRemove = new ArrayList<>();
+        kit.forEach(itemStack -> toRemove.add(itemStack.clone()));
+        copyToIterate.forEach(item -> {
             for (ItemStack match : toRemove) {
-                if (item.isSimilar(match)) {
+                if (item.getType().equals(match.getType())) {
                     if (item.getAmount() > match.getAmount()) {
                         item.setAmount(item.getAmount() - match.getAmount());
                         toRemove.remove(match);

@@ -1,6 +1,7 @@
 package fr.lanfix.randomitemchallengevsjuggernaut.commands;
 
 import fr.lanfix.randomitemchallengevsjuggernaut.game.Game;
+import fr.lanfix.randomitemchallengevsjuggernaut.utils.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -30,10 +31,14 @@ public class GameCommand implements CommandExecutor, TabCompleter {
         switch (args[0].toLowerCase()) {
             case "start" -> {
                 if (sender instanceof Player player) {
-                    if (!game.getJuggernauts().isEmpty() && !game.getSurvivors().isEmpty()) {
-                        game.start(player.getLocation());
+                    if (!game.isRunning()) {
+                        if (!game.getJuggernauts().isEmpty() && !game.getSurvivors().isEmpty()) {
+                            game.start(player.getLocation());
+                        } else {
+                            sender.sendMessage(ChatColor.RED + "Please select at least a survivor and a juggernaut");
+                        }
                     } else {
-                        sender.sendMessage(ChatColor.RED + "Please select at least a survivor and a juggernaut");
+                        sender.sendMessage(ChatColor.RED + "A game is already running...");
                     }
                 } else {
                     sender.sendMessage(ChatColor.RED +
@@ -41,13 +46,22 @@ public class GameCommand implements CommandExecutor, TabCompleter {
                 }
             }
             case "stop" -> {
-                Bukkit.broadcastMessage(ChatColor.RED + "Forced stop of the Random Item Challenge");
-                game.stop();
+                if (game.isRunning()) {
+                    Bukkit.broadcastMessage(ChatColor.RED + "Forced stop of the Random Item Challenge VS Juggernaut");
+                    game.stop();
+                } else {
+                    sender.sendMessage(ChatColor.RED + "No game is currently running...");
+                }
             }
             case "survivors", "juggernauts" -> {
                 if (args.length == 1) {
-                    sender.sendMessage(ChatColor.RED + "You are missing an argument");
-                    sender.sendMessage(ChatColor.RED + msg + " <clear/set/add>");
+                    switch (args[0].toLowerCase()) {
+                        case "survivors" -> sender.sendMessage(ChatColor.BLUE + "The survivors are : "
+                                + StringUtils.streamAsBulletList(game.getSurvivors().stream().map(Player::getName)));
+                        case "juggernauts" -> sender.sendMessage(ChatColor.BLUE + "The juggernauts are : "
+                                + StringUtils.streamAsBulletList(game.getJuggernauts().stream().map(Player::getName)));
+                    }
+                    return true;
                 }
                 switch (args[1].toLowerCase()) {
                     case "clear" -> {
@@ -60,25 +74,34 @@ public class GameCommand implements CommandExecutor, TabCompleter {
                     case "set" -> {
                         List<Player> newList = getPlayerListFromArgs(args);
                         switch (args[0].toLowerCase()) {
-                            case "survivors" -> game.setSurvivors(newList);
-                            case "juggernauts" -> game.setJuggernauts(newList);
+                            case "survivors" -> {
+                                newList.removeAll(game.getJuggernauts());
+                                game.setSurvivors(newList);
+                            }
+                            case "juggernauts" -> {
+                                newList.removeAll(game.getSurvivors());
+                                game.setJuggernauts(newList);
+                            }
                         }
-                        sender.sendMessage(ChatColor.GREEN + "The " + args[0] + " list is now set to: " + Arrays.toString(newList.toArray()));
+                        sender.sendMessage(ChatColor.GREEN + "The " + args[0] + " list is now set to: "
+                                + Arrays.toString(newList.stream().map(Player::getName).toArray()));
                     }
                     case "add" -> {
                         List<Player> toAdd = getPlayerListFromArgs(args);
+                        toAdd.removeAll(game.getSurvivors());
+                        toAdd.removeAll(game.getJuggernauts());
                         switch (args[0].toLowerCase()) {
                             case "survivors" -> {
                                 game.addSurvivors(toAdd);
                                 sender.sendMessage(ChatColor.GREEN + "Successfully added " +
-                                        Arrays.toString(toAdd.toArray()) + " to the survivors.\nThe list is now : "
-                                        + Arrays.toString(game.getSurvivors().toArray()));
+                                        Arrays.toString(toAdd.stream().map(Player::getName).toArray()) + " to the survivors.\nThe list is now : "
+                                        + Arrays.toString(game.getSurvivors().stream().map(Player::getName).toArray()));
                             }
                             case "juggernauts" -> {
                                 game.addJuggernauts(toAdd);
                                 sender.sendMessage(ChatColor.GREEN + "Successfully added " +
-                                        Arrays.toString(toAdd.toArray()) + " to the juggernauts.\nThe list is now : "
-                                        + Arrays.toString(game.getJuggernauts().toArray()));
+                                        Arrays.toString(toAdd.stream().map(Player::getName).toArray()) + " to the juggernauts.\nThe list is now : "
+                                        + Arrays.toString(game.getJuggernauts().stream().map(Player::getName).toArray()));
                             }
                         }
                     }
@@ -134,7 +157,7 @@ public class GameCommand implements CommandExecutor, TabCompleter {
                         List<String> completeArgs = new ArrayList<>(players.stream().map(Player::getName).toList());
                         completeArgs.removeAll(List.of(args));
                         completeArgs.forEach(arg -> {
-                            if (arg.toLowerCase().startsWith(args[1].toLowerCase())) r.add(arg);
+                            if (arg.toLowerCase().startsWith(args[args.length - 1].toLowerCase())) r.add(arg);
                         });
                     }
                 }
