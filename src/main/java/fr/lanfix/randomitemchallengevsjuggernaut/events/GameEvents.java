@@ -67,22 +67,25 @@ public class GameEvents implements Listener {
     }
 
     private void logOffTimer(Player player) {
-        Bukkit.broadcastMessage(player.getDisplayName() + " logged off, if he does not log back in less than 5 minutes, he'll be out...");
-        new BukkitRunnable() {
-            int second = 0;
-            @Override
-            public void run() {
-                second++;
-                if (player.isOnline()) {
-                    cancel();
-                } else if (second >= 300) {
-                    Bukkit.broadcastMessage(player.getDisplayName() + " is out because he left for more than 5 minutes !");
-                    game.survivorDeath(player);
-                    player.setGameMode(GameMode.SPECTATOR);
-                    cancel();
+        if (this.game.isRunning()) {
+            Bukkit.broadcastMessage(player.getDisplayName() + " logged off, if he does not log back in less than 5 minutes, he'll be out...");
+            new BukkitRunnable() {
+                int second = 0;
+
+                @Override
+                public void run() {
+                    second++;
+                    if (player.isOnline()) {
+                        cancel();
+                    } else if (second >= 300) {
+                        Bukkit.broadcastMessage(player.getDisplayName() + " is out because he left for more than 5 minutes !");
+                        game.survivorDeath(player);
+                        player.setGameMode(GameMode.SPECTATOR);
+                        cancel();
+                    }
                 }
-            }
-        }.runTaskTimer(plugin, 20, 20);
+            }.runTaskTimer(plugin, 20, 20);
+        }
     }
 
 }
