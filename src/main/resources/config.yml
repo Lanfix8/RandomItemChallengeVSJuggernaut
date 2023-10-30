@@ -1,7 +1,7 @@
 # number of stacks given
-stacks: 9
+stacks: 1
 # time between the drops (seconds)
-drop-interval: 120
+drop-interval: 30
 # number of drops (different items)
 drop-count: 1
 
