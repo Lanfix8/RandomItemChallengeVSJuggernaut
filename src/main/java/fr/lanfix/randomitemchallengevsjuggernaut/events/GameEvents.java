@@ -1,6 +1,5 @@
 package fr.lanfix.randomitemchallengevsjuggernaut.events;
 
-import fr.lanfix.randomitemchallengevsjuggernaut.RandomItemChallengeVSJuggernaut;
 import fr.lanfix.randomitemchallengevsjuggernaut.game.Game;
 import fr.lanfix.randomitemchallengevsjuggernaut.game.JuggernautKit;
 import org.bukkit.Bukkit;
@@ -15,15 +14,12 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
-import org.bukkit.scheduler.BukkitRunnable;
 
 public class GameEvents implements Listener {
 
-    private final RandomItemChallengeVSJuggernaut plugin;
     private final Game game;
 
-    public GameEvents(RandomItemChallengeVSJuggernaut plugin, Game game) {
-        this.plugin = plugin;
+    public GameEvents(Game game) {
         this.game = game;
     }
 
@@ -58,34 +54,12 @@ public class GameEvents implements Listener {
 
     @EventHandler
     public void onLeave(PlayerQuitEvent event) {
-        logOffTimer(event.getPlayer());
+        game.logOffTimer(event.getPlayer());
     }
 
     @EventHandler
     public void onKick(PlayerKickEvent event) {
-        logOffTimer(event.getPlayer());
-    }
-
-    private void logOffTimer(Player player) {
-        if (this.game.isRunning()) {
-            Bukkit.broadcastMessage(player.getDisplayName() + " logged off, if he does not log back in less than 5 minutes, he'll be out...");
-            new BukkitRunnable() {
-                int second = 0;
-
-                @Override
-                public void run() {
-                    second++;
-                    if (player.isOnline()) {
-                        cancel();
-                    } else if (second >= 300) {
-                        Bukkit.broadcastMessage(player.getDisplayName() + " is out because he left for more than 5 minutes !");
-                        game.survivorDeath(player);
-                        player.setGameMode(GameMode.SPECTATOR);
-                        cancel();
-                    }
-                }
-            }.runTaskTimer(plugin, 20, 20);
-        }
+        game.logOffTimer(event.getPlayer());
     }
 
 }

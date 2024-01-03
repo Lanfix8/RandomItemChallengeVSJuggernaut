@@ -4,6 +4,7 @@ import fr.lanfix.randomitemchallengevsjuggernaut.RandomItemChallengeVSJuggernaut
 import fr.lanfix.randomitemchallengevsjuggernaut.utils.StringUtils;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -99,7 +100,7 @@ public class Game {
         List<Material> choices = switch(main.getConfig().getString("itemChooseMode", "custom")) {
             case "custom" -> {
                 List<Material> r = new ArrayList<>();
-                main.getConfig().getStringList("items").forEach(string -> r.add(Material.valueOf(string)));
+                main.getConfig().getStringList("items").forEach(string -> r.add(Material.valueOf(string.toUpperCase())));
                 yield r;
             }
             case "allItems" -> {
@@ -109,7 +110,7 @@ public class Game {
             }
             default -> throw new IllegalStateException("Wrong itemChooseMode: " + main.getConfig().getString("itemChooseMode"));
         };
-        // repeat for all players
+        // repeat for all survivors
         for (Player player: survivors) {
             for (int i = 0; i < main.getConfig().getInt("drop-count", 1); i++) {
                 // find the location and choose item
@@ -120,7 +121,13 @@ public class Game {
                 PersistentDataContainer dataContainer = Objects.requireNonNull(itemStack.getItemMeta()).getPersistentDataContainer();
                 dataContainer.set(RandomItemChallengeVSJuggernaut.protectedDataKey, PersistentDataType.STRING, "survivor");
                 // drop the items
+                Inventory inv = player.getInventory();
                 for (int j = 0; j < main.getConfig().getInt("stacks", 9); j++) {
+                    int firstEmpty = inv.firstEmpty();
+                    if (firstEmpty != -1) {
+                        inv.setItem(firstEmpty, itemStack);
+                        continue;
+                    }
                     player.getWorld().dropItem(location, itemStack, item -> {
                         // set item protected to survivors again because the first option doesn't work at the drop but works when dropped by a player (wtf)
                         PersistentDataContainer itemDataContainer = item.getPersistentDataContainer();
@@ -158,6 +165,42 @@ public class Game {
         }
     }
 
+    public void logOffTimer(Player player) {
+        if (running) {
+            boolean wasSurvivor = survivors.contains(player);
+            if (wasSurvivor || juggernauts.contains(player)) {
+                if (wasSurvivor) {
+                    removeSurvivor(player);
+                } else {
+                    removeJuggernaut(player);
+                }
+                Bukkit.broadcastMessage(player.getDisplayName() + " logged off, if he does not log back in less than 5 minutes, he'll be out...");
+                new BukkitRunnable() {
+                    int second = 0;
+                    @Override
+                    public void run() {
+                        second++;
+                        if (player.isOnline()) {
+                            if (wasSurvivor) {
+                                addSurvivorByName(player.getName());
+                            } else {
+                                addJuggernautByName(player.getName());
+                            }
+                            cancel();
+                        } else if (second >= 300) {
+                            Bukkit.broadcastMessage(player.getDisplayName() + " is out because he left for more than 5 minutes !");
+                            if (wasSurvivor) {
+                                survivorDeath(player);
+                            }
+                            player.setGameMode(GameMode.SPECTATOR);
+                            cancel();
+                        }
+                    }
+                }.runTaskTimer(main, 20, 20);
+            }
+        }
+    }
+
     public List<Player> getSurvivors() {
         return survivors;
     }
@@ -171,12 +214,20 @@ public class Game {
         this.survivors.addAll(survivors);
     }
 
+    public void removeSurvivor(Player survivor) {
+        this.survivors.remove(survivor);
+    }
+
     public void clearSurvivors() {
         this.survivors.clear();
     }
 
     public void addSurvivors(List<Player> survivors) {
         this.survivors.addAll(survivors);
+    }
+
+    public void addSurvivorByName(String name) {
+        this.survivors.add(Bukkit.getPlayer(name));
     }
 
     public List<Player> getJuggernauts() {
@@ -192,12 +243,20 @@ public class Game {
         this.juggernauts.addAll(juggernauts);
     }
 
+    public void removeJuggernaut(Player juggernaut) {
+        this.juggernauts.remove(juggernaut);
+    }
+
     public void clearJuggernauts() {
         this.juggernauts.clear();
     }
 
     public void addJuggernauts(List<Player> juggernauts) {
         this.juggernauts.addAll(juggernauts);
+    }
+
+    public void addJuggernautByName(String name) {
+        this.juggernauts.add(Bukkit.getPlayer(name));
     }
 
     public boolean isRunning() {
