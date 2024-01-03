@@ -21,7 +21,7 @@ public final class RandomItemChallengeVSJuggernaut extends JavaPlugin {
         load();
         // Register events
         PluginManager pluginManager = getServer().getPluginManager();
-        pluginManager.registerEvents(new GameEvents(this, this.game), this);
+        pluginManager.registerEvents(new GameEvents(this.game), this);
         pluginManager.registerEvents(new ItemEvents(this.game), this);
         // Register commands
         getCommand("ricvsjuggernaut").setExecutor(new GameCommand(this.game));
